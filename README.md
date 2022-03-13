@@ -1,3 +1,3 @@
 # Word2Vec
 ## TODO
-Tests, text standartization, codestyle
+Tests, comments
