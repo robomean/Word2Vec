@@ -1,4 +1,24 @@
 class Word2Vec:
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    
+    @staticmethod
+    def init_2d_lists(size, *args):
+        for arg in args:
+            for i in range(size):
+                arg.append([])
+        return args
+    
+    @staticmethod
+    def window(position, window_size):
+        window = []
+        for i in range(position - window_size, position + window_size + 1):
+            if i < 0 or i >= len(words) or i == position:
+                continue
+            window.append(word_to_num[words[i]])
+
+        return window
     
     def __build_dicts(self, words):
         word_to_num = {}
@@ -12,35 +32,14 @@ class Word2Vec:
         return num_to_word, word_to_num
     
     def __build_prob_dict(self, word_freq):
-        prob_sum = (word_freq[1] ** self.alpha).sum()
-        word_prob = (word_freq[1] ** self.alpha) / prob_sum
+        prob_sum = (word_freq[1] ** alpha).sum()
+        word_prob = (word_freq[1] ** alpha) / prob_sum
         
         word_prob_dict = {}
         for num, word in enumerate(word_freq[0]):
             word_prob_dict[word] = word_prob[num]
     
         return word_prob_dict
-    
-    @staticmethod
-    def sigmoid(x):
-        return 1 / (1 + np.exp(-x))
-    
-    @staticmethod
-    def init_2d_lists(size, *args):
-        for arg in args:
-            for i in range(size):
-                arg.append([])
-        return args
-    
-    @staticmethod
-    def window(pos, window_size):
-        window = []
-        for i in range(pos - window_size, pos + window_size + 1):
-            if i < 0 or i >= len(words) or i == pos:
-                continue
-            window.append(word_to_num[words[i]])
-
-        return window
     
     def __build_pos_data(self, words, text_size):
         pos_samples, inv_pos_samples = self.init_2d_lists(self.vocab_size, [], [])
@@ -54,7 +53,7 @@ class Word2Vec:
         return pos_samples, inv_pos_samples
     
     def __sample_negative(self, position, pos_samples):
-        cur_pos_words = pos_samples[word_to_num[words[pos]]]
+        cur_pos_words = pos_samples[word_to_num[words[position]]]
         words_to_choose = list(self.vocab - set(cur_pos_words))
         word_probs = [self.word_prob_dict[word] for word in words_to_choose]
         negative_words = random.choices(words_to_choose, weights=word_probs, k=len(cur_pos_words) * self.neg_per_pos)
@@ -65,7 +64,7 @@ class Word2Vec:
         neg_samples, inv_neg_samples = self.init_2d_lists(self.vocab_size, [], [])
         
         for position in range(len(words)):
-            if len(neg_samples[word_to_num[words[position]]]) == 0:
+            if not neg_samples[word_to_num[words[position]]]:
                 for word_num in self.__sample_negative(position, pos_samples):
                     neg_samples[word_to_num[words[position]]].append(word_num)
                     inv_neg_samples[word_num].append(word_to_num[words[position]])
@@ -80,11 +79,34 @@ class Word2Vec:
         
         return pos_samples, neg_samples, inv_pos_samples, inv_neg_samples
     
+    def __update_c_pos(self, w, c, inv_pos_samples):
+        for word_num in range(self.vocab_size):
+            possible_words = inv_pos_samples[word_num]
+            random_word = random.choices(possible_words, k = 1)[0]
+            c[word_num] -= eta * (sigmoid(c[word_num] * w[random_word]) - 1) * w[random_word]
+            
+    def __update_c_neg(self, w, c, inv_neg_samples):
+        for word_num in range(self.vocab_size):
+            possible_words = inv_neg_samples[word_num]
+            random_word = random.choices(possible_words, k = 1)[0]
+            c[word_num] -= eta * sigmoid(c[word_num] * w[random_word]) * w[random_word]
+            
+    def __update_w(self, w, c, pos_samples, neg_samples):
+        for word_num in range(self.vocab_size):
+            positive_num = random.choices(pos_samples[word_num], k = 1)[0]
+            negative_num = random.choices(neg_samples[word_num], k = 2)
+            negative_sum = 0
+            for neg in negative_num:
+                negative_sum += sigmoid(c[neg] * w[word_num]) * c[neg]
+            w[word_num] -= eta * ((sigmoid(c[positive_num] * w[word_num]) - 1) * c[positive_num] + negative_sum)
+    
     def __build_w2v_dict(self, w, c):
-        word2vec = w + c
+        w2v = w + c
         w2v_dict = {}
         for word in self.word_to_num:
-            w2v_dict[word] = word2vec[self.word_to_num[word]]
+            w2v_dict[word] = w2v[self.word_to_num[word]]
+        
+        return w2v_dict
     
     def __build_embedding(self, data):
         words = data.split(' ')
@@ -103,33 +125,15 @@ class Word2Vec:
         c = np.random.random((self.vocab_size, self.embed_size))
 
         for iteration in range(self.iter_num):
-            for word_num in range(self.vocab_size):
-                possible_words = inv_pos_samples[word_num]
-                print(random.choices(possible_words, k = 1))
-                random_word = random.choices(possible_words, k = 1)[0]
-                c[word_num] = c[word_num] - self.eta * (sigmoid(c[word_num] * w[random_word]) - 1) * w[random_word]
-
-            for word_num in range(self.vocab_size):
-                possible_words = inv_neg_samples[word_num]
-                print(possible_words)
-                random_word = random.choices(possible_words, k = 1)[0]
-                c[word_num] = c[word_num] - self.eta * sigmoid(c[word_num] * w[random_word]) * w[random_word]
-
-            for word_num in range(self.vocab_size):
-                positive_nums = pos_samples[word_num]
-                negative_nums = neg_samples[word_num]
-                positive_num = random.choices(positive_nums, k = 1)[0]
-                negative_num = random.choices(negative_nums, k = 2)
-                negative_sum = 0
-                for neg in negative_num:
-                    negative_sum += sigmoid(c[neg] * w[word_num]) * c[neg]
-                w[word_num] = w[word_num] - self.eta * ((sigmoid(c[positive_num] * w[word_num]) - 1) * c[positive_num] + negative_sum) 
+            self.__update_c_pos(w, c, inv_pos_samples)
+            self.__update_c_neg(w, c, inv_neg_samples)
+            self.__update_w(w, c, pos_samples, neg_samples)
 
         w2v_dict = self.__build_w2v_dict(w, c)
-
-        return w2v_dict 
+        return w2v_dict
     
-    def __init__(self, data, alpha=0.75, window_size = 2, neg_per_pos = 2, embed_size = 100, eta = 0.01, iter_num = 1000):
+    def __init__(self, data, alpha=0.75, window_size = 2, neg_per_pos = 2, embed_size = 100, eta = 0.01,
+                 iter_num = 1000):
         self.alpha = alpha
         self.window_size = window_size
         self.neg_per_pos = neg_per_pos
