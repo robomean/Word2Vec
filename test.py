@@ -40,11 +40,11 @@ class Test(unittest.TestCase):
 
         for i in range(65):
             for pos in test_w2v.get_data_to_train(test_w2v.words)[0][i]:
-                self.assertNotIn(pos, test_w2v.get_data_to_train(test_w2v.words)[1])
+                self.assertNotIn(pos, test_w2v.get_data_to_train(test_w2v.words)[1][i])
 
         for i in range(65):
             for pos in test_w2v.get_data_to_train(test_w2v.words)[2][i]:
-                self.assertNotIn(pos, test_w2v.get_data_to_train(test_w2v.words)[3])
+                self.assertNotIn(pos, test_w2v.get_data_to_train(test_w2v.words)[3][i])
 
     # Embeddings themselves were tested on https://ods.ai/tracks/nlp-course-spring-22
 
