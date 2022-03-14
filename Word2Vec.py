@@ -70,7 +70,7 @@ class Word2Vec:
         """Randomly choose not standing close (#window_size)
            words according to their uniform probabilities"""
         cur_pos_words = pos_samples[self.word_to_num[self.words[position]]]
-        #cur_pos_words = [self.num_to_word[num] for num in cur_pos_words]
+        cur_pos_words = [self.num_to_word[num] for num in cur_pos_words]
         words_to_choose = list(self.vocab - set(cur_pos_words))
         word_probs = [self.word_prob_dict[word] for word in words_to_choose]
         negative_words = random.choices(words_to_choose, weights=word_probs, k=len(cur_pos_words) * self.neg_per_pos)
