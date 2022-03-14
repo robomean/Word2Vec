@@ -7,6 +7,6 @@ jobs:
     steps:
     - uses: actions/checkout@main
     - name: Test Word2Vec
-      uses: robomean/Word2Vec@main
+      uses: robomean/metrics@main
       with:
         args: python test.py
