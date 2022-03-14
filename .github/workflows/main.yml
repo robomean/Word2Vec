@@ -5,8 +5,8 @@ jobs:
     name: Test Word2Vec
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@main
     - name: Test Word2Vec
-      uses: cclauss/Test-Word2Vec@master
+      uses: robomean/Word2Vec@main
       with:
         args: python test.py
