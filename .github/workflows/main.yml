@@ -1,0 +1,12 @@
+on: push
+name: on push
+jobs:
+  gitHubActionForPytest:
+    name: Test Word2Vec
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Test Word2Vec
+      uses: cclauss/Test-Word2Vec@master
+      with:
+        args: python test.py
